@@ -18,39 +18,39 @@ O objetivo é fornecer um ambiente **padronizado, reutilizável e próximo de pr
 
 ## Serviços Disponíveis
 
-###raefik
+### Traefik
 Reverse proxy responsável por:
 - Roteamento por domínio
 - Exposição HTTP (porta 80)
 - Dashboard de observabilidade
 
-###ailHog
+### MailHog
 - Captura e visualização de e-mails enviados pela aplicação
 - Simula um servidor SMTP local
 
-###inIO
+### MinIO
 - Storage compatível com S3
 - Ideal para desenvolvimento local de uploads e arquivos
 
-###edis
+### Redis
 - Cache
 - Sessões
 - Filas simples
 
-###ongoDB
+### MongoDB
 - Banco NoSQL orientado a documentos
 - Útil para eventos, logs e dados flexíveis
 
-###ostgreSQL
+### PostgreSQL
 - Banco relacional principal
 - Indicado para dados transacionais
 
-###eycloak
+### Keycloak
 - Identity and Access Management (IAM)
 - OAuth2 / OpenID Connect
 - SSO para múltiplos sistemas
 
-###abbitMQ
+### RabbitMQ
 - Mensageria baseada em filas
 - Processamento assíncrono e background jobs
 
@@ -68,7 +68,7 @@ root/
 
 ---
 
-##️ Pré-requisitos
+## Pré-requisitos
 
 - Docker
 - Docker Compose (v2+)
@@ -143,7 +143,7 @@ Todas as credenciais e configurações sensíveis estão centralizadas no arquiv
 
 ---
 
-##️ Observações importantes
+## Observações importantes
 
 - Este stack é **exclusivo para desenvolvimento**
 - Dashboard do Traefik é exposto sem autenticação
