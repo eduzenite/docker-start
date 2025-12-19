@@ -1,0 +1,153 @@
+version: "3.9"
+
+networks:
+  infra:
+    driver: bridge
+
+services:
+
+  # =========================
+  # Traefik - Reverse Proxy
+  # =========================
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--providers.file.filename=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "8080:8080" # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks: ["infra"]
+    restart: unless-stopped
+
+
+  # =========================
+  # MailHog
+  # =========================
+  mailhog:
+    image: mailhog/mailhog
+    profiles: ["core"]
+    networks: ["infra"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailhog.rule=Host(`mailhog.localhost`)"
+      - "traefik.http.services.mailhog.loadbalancer.server.port=8025"
+    restart: unless-stopped
+
+
+  # =========================
+  # MinIO
+  # =========================
+  minio:
+    image: minio/minio
+    profiles: ["core"]
+    networks: ["infra"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    volumes:
+      - minio_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`minio.localhost`)"
+      - "traefik.http.services.minio.loadbalancer.server.port=9001"
+    restart: unless-stopped
+
+
+  # =========================
+  # Redis (interno)
+  # =========================
+  redis:
+    image: redis:7
+    profiles: ["core"]
+    networks: ["infra"]
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+
+  # =========================
+  # MongoDB (interno)
+  # =========================
+  mongodb:
+    image: mongo:7
+    profiles: ["databases"]
+    networks: ["infra"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+
+  # =========================
+  # PostgreSQL (interno)
+  # =========================
+  postgres:
+    image: postgres:16
+    profiles: ["databases", "iam"]
+    networks: ["infra"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+
+  # =========================
+  # Keycloak
+  # =========================
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    profiles: ["iam"]
+    networks: ["infra"]
+    command: start-dev
+    depends_on:
+      - postgres
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.localhost`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+
+  # =========================
+  # RabbitMQ
+  # =========================
+  rabbitmq:
+    image: rabbitmq:3-management
+    profiles: ["messaging"]
+    networks: ["infra"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.localhost`)"
+      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+    restart: unless-stopped
+
+
+volumes:
+  minio_data:
+  redis_data:
+  mongo_data:
+  postgres_data:
+  rabbitmq_data:
